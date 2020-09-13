@@ -28,6 +28,15 @@ def folder(path: Path = typer.Argument(
     dir_okay=True,
     readable=True,
     resolve_path=True
+), ignore_extension: str = typer.Option(
+    default=None
+), ignore_path: Path = typer.Option(
+    default=None,
+    exists=True,
+    file_okay=True,
+    dir_okay=True,
+    readable=True,
+    resolve_path=True
 )):
     """
     Convert all videos in a folder
@@ -38,10 +47,16 @@ def folder(path: Path = typer.Argument(
     for dir, folders, files in os.walk(path):
         base_dir = Path(dir)
         for file in files:
+            
             file = base_dir / file
             guess = filetype.guess(str(file))
 
             if guess and 'video' in guess.mime:
+
+                if (not (ignore_extension == None) and str(file).lower().endswith(ignore_extension)) or (not (ignore_path == None) and str(ignore_path) in str(file)) :
+                    typer.secho(f'ignoring: {file}')
+                    continue
+                
                 videos.append(file)
 
     manager = enlighten.get_manager()
@@ -94,4 +109,12 @@ def file(path: Path = typer.Argument(
         typer.secho('The destination file already exist, please delete it', fg=RED)
         return
 
-    convert_video(str(path),str(conv_path))
+    try:
+        convert_video(str(path),str(conv_path))
+
+    except FileNotFoundError as error:
+        if error.filename == 'ffmpeg':
+            typer.secho('It seems you don\'t have ffmpeg installed', fg=RED)
+            typer.secho('Check FFMPEG secction on https://github.com/hiancdtrsnm/video-diet#FFMPEG', fg=RED)
+        else: 
+            raise error
